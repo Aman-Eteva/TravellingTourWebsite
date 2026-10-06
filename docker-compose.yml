@@ -1,0 +1,60 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: travel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-travel_local}
+      POSTGRES_DB: travel
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travel"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["127.0.0.1:11434:11434"]
+    volumes: ["ollama:/root/.ollama"]
+  models:
+    image: ollama/ollama:latest
+    depends_on: [ollama]
+    entrypoint: /bin/sh
+    command:
+      [
+        "-c",
+        "until ollama list; do sleep 2; done; ollama pull $${CHAT_MODEL} && ollama pull $${EMBED_MODEL}",
+      ]
+    env_file: .env
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-qwen2.5:1.5b}
+      EMBED_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+  mail:
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:8025:8025", "127.0.0.1:1025:1025"]
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://travel:${POSTGRES_PASSWORD:-travel_local}@db:5432/travel
+      OLLAMA_BASE_URL: http://ollama:11434
+      SMTP_HOST: mail
+      NODE_ENV: development
+      PORT: 4000
+      TRUST_PROXY_HOPS: 1
+    ports: ["127.0.0.1:4000:4000"]
+    depends_on:
+      db: { condition: service_healthy }
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports: ["127.0.0.1:5173:8080"]
+    depends_on: [api]
+volumes:
+  postgres:
+  ollama:

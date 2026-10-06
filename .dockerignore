@@ -1,0 +1,11 @@
+node_modules
+.local
+.env
+.env.*
+test-results
+tests
+**/tests
+.github
+**/dist
+.git
+*.log

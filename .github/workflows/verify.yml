@@ -1,0 +1,46 @@
+name: Verify production build
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: travel
+          POSTGRES_PASSWORD: ci-local-password
+          POSTGRES_DB: travel
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U travel -d travel"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://travel:ci-local-password@localhost:5432/travel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:migrate
+      - run: npm run build
+      - run: npm test
+      - run: docker build -f apps/api/Dockerfile --target production -t roamly-api:ci .
+      - run: docker build -f apps/web/Dockerfile --target production -t roamly-web:ci .
+      - name: Validate production service graph
+        run: docker compose -f docker-compose.production.yml config --quiet
+        env:
+          SITE_DOMAIN: travel.example.com
+          ACME_EMAIL: ci@example.com
+          POSTGRES_PASSWORD: ci-local-password
+          JWT_SECRET: ci-only-access-secret-not-a-production-credential
+          JWT_REFRESH_SECRET: ci-only-refresh-secret-not-a-production-credential
+          SMTP_HOST: smtp.example.com
+          SMTP_FROM: hello@example.com

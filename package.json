@@ -1,0 +1,50 @@
+{
+  "name": "roamly-travel-platform",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "start": "npm run start -w apps/api",
+    "admin:create": "node scripts/create-admin.mjs",
+    "deploy:config": "docker compose --env-file .env.production -f docker-compose.production.yml config --quiet",
+    "deploy:build": "docker compose --env-file .env.production -f docker-compose.production.yml build",
+    "deploy:up": "docker compose --env-file .env.production -f docker-compose.production.yml up -d --build",
+    "setup": "tsx scripts/setup.ts",
+    "test:e2e": "playwright test",
+    "dev": "concurrently --kill-others-on-fail -n db,api,web -c blue,green,magenta \"npm run db:local\" \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "test": "npm run test -w apps/api",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:local": "tsx scripts/local-db.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.23.1",
+    "concurrently": "^9.1.2",
+    "pg": "^8.23.0",
+    "prettier": "^3.9.9",
+    "prisma": "6.19.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "@prisma/config": {
+      "effect": "^3.20.0",
+      "deepmerge-ts": "^8.0.0"
+    }
+  }
+}

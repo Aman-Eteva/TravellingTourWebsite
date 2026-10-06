@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String
+  phone String?
+  role Role @default(CUSTOMER)
+  active Boolean @default(true)
+  tokenVersion Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bookings Booking[]
+  reviews Review[]
+  wishlist Wishlist?
+  notifications Notification[]
+  conversations ChatConversation[]
+  documents RAGDocument[]
+  sessions Session[]
+  resets PasswordReset[]
+  audits AuditLog[]
+}
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  tokenHash String @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+model PasswordReset {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  tokenHash String @unique
+  expiresAt DateTime
+}
+model Destination {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  country String
+  description String
+  image String
+  tours Tour[]
+  createdAt DateTime @default(now())
+}
+model TourCategory {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  description String @default("")
+  tours Tour[]
+}
+model Tour {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  slug String @unique
+  description String
+  shortDescription String
+  destinationId String @db.Uuid
+  destination Destination @relation(fields:[destinationId],references:[id])
+  categoryId String @db.Uuid
+  category TourCategory @relation(fields:[categoryId],references:[id])
+  price Int
+  currency String @default("INR")
+  duration Int
+  minTravelers Int @default(1)
+  maxTravelers Int @default(12)
+  difficulty String @default("Easy")
+  meetingPoint String
+  included String[]
+  excluded String[]
+  cancellationPolicy String
+  cancellationDays Int @default(7)
+  refundPercent Int @default(100)
+  status String @default("PUBLISHED")
+  featured Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  images TourImage[]
+  availability TourAvailability[]
+  itinerary ItineraryDay[]
+  hotels Hotel[]
+  activities Activity[]
+  bookings Booking[]
+  reviews Review[]
+  wishlists WishlistItem[]
+  @@index([destinationId,categoryId,status])
+  @@index([price])
+}
+model TourImage {
+  id String @id @default(uuid()) @db.Uuid
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id],onDelete:Cascade)
+  url String
+  alt String
+  position Int @default(0)
+}
+model TourAvailability {
+  id String @id @default(uuid()) @db.Uuid
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id],onDelete:Cascade)
+  date DateTime @db.Date
+  capacity Int
+  reserved Int @default(0)
+  bookings Booking[]
+  @@unique([tourId,date])
+  @@index([date])
+}
+model ItineraryDay {
+  id String @id @default(uuid()) @db.Uuid
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id],onDelete:Cascade)
+  day Int
+  title String
+  description String
+  meals String
+  @@unique([tourId,day])
+}
+model Hotel {
+  id String @id @default(uuid()) @db.Uuid
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id],onDelete:Cascade)
+  name String
+  address String
+  stars Int @default(4)
+}
+model Activity {
+  id String @id @default(uuid()) @db.Uuid
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id],onDelete:Cascade)
+  name String
+  description String
+}
+model Booking {
+  id String @id @default(uuid()) @db.Uuid
+  sequence Int @unique @default(autoincrement())
+  reference String @unique
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id])
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id])
+  availabilityId String @db.Uuid
+  availability TourAvailability @relation(fields:[availabilityId],references:[id])
+  travelDate DateTime
+  count Int
+  subtotal Int
+  discount Int @default(0)
+  total Int
+  status BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  expiresAt DateTime?
+  cancelledAt DateTime?
+  refund Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  travelers BookingTraveler[]
+  payments Payment[]
+  review Review?
+  @@index([userId,status])
+  @@index([travelDate])
+}
+model BookingTraveler {
+  id String @id @default(uuid()) @db.Uuid
+  bookingId String @db.Uuid
+  booking Booking @relation(fields:[bookingId],references:[id],onDelete:Cascade)
+  name String
+  age Int
+  email String?
+}
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+  bookingId String @db.Uuid
+  booking Booking @relation(fields:[bookingId],references:[id])
+  amount Int
+  status PaymentStatus
+  idempotencyKey String @unique
+  provider String @default("MOCK")
+  createdAt DateTime @default(now())
+  @@index([bookingId])
+}
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id])
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id])
+  bookingId String @unique @db.Uuid
+  booking Booking @relation(fields:[bookingId],references:[id])
+  rating Int
+  title String
+  comment String
+  visible Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([tourId])
+}
+model Wishlist {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  items WishlistItem[]
+}
+model WishlistItem {
+  id String @id @default(uuid()) @db.Uuid
+  wishlistId String @db.Uuid
+  wishlist Wishlist @relation(fields:[wishlistId],references:[id],onDelete:Cascade)
+  tourId String @db.Uuid
+  tour Tour @relation(fields:[tourId],references:[id],onDelete:Cascade)
+  createdAt DateTime @default(now())
+  @@unique([wishlistId,tourId])
+}
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  title String
+  message String
+  type String
+  link String?
+  read Boolean @default(false)
+  dedupeKey String? @unique
+  createdAt DateTime @default(now())
+  @@index([userId,read])
+}
+model ChatConversation {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  title String @default("New adventure")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages ChatMessage[]
+  @@index([userId])
+}
+model ChatMessage {
+  id String @id @default(uuid()) @db.Uuid
+  conversationId String @db.Uuid
+  conversation ChatConversation @relation(fields:[conversationId],references:[id],onDelete:Cascade)
+  role String
+  content String
+  sources Json @default("[]")
+  createdAt DateTime @default(now())
+  @@index([conversationId,createdAt])
+}
+model RAGDocument {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  content String
+  type String @default("GENERAL_TRAVEL")
+  ownerId String? @db.Uuid
+  owner User? @relation(fields:[ownerId],references:[id],onDelete:Cascade)
+  status String @default("PENDING")
+  model String?
+  indexedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chunks RAGChunk[]
+  @@index([ownerId,status])
+}
+model RAGChunk {
+  id String @id @default(uuid()) @db.Uuid
+  documentId String @db.Uuid
+  document RAGDocument @relation(fields:[documentId],references:[id],onDelete:Cascade)
+  content String
+  position Int
+  embedding Unsupported("vector")?
+  @@unique([documentId,position])
+}
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  userId String? @db.Uuid
+  user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+  action String
+  entity String
+  entityId String?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+model ContactMessage {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  email String
+  message String
+  createdAt DateTime @default(now())
+}

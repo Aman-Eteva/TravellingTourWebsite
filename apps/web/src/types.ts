@@ -1,0 +1,122 @@
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: "CUSTOMER" | "ADMIN";
+  active: boolean;
+  createdAt: string;
+};
+export type Destination = {
+  id: string;
+  name: string;
+  country: string;
+  description: string;
+  image: string;
+  _count?: { tours: number };
+};
+export type Category = { id: string; name: string; description: string };
+export type Review = {
+  id: string;
+  rating: number;
+  title: string;
+  comment: string;
+  visible: boolean;
+  user?: { name: string };
+  tour?: { title: string };
+};
+export type Tour = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  shortDescription: string;
+  destinationId: string;
+  categoryId: string;
+  destination: Destination;
+  category: Category;
+  price: number;
+  currency: string;
+  duration: number;
+  minTravelers: number;
+  maxTravelers: number;
+  difficulty: string;
+  meetingPoint: string;
+  included: string[];
+  excluded: string[];
+  cancellationPolicy: string;
+  cancellationDays: number;
+  refundPercent: number;
+  status: string;
+  featured: boolean;
+  images: { url: string; alt: string }[];
+  availability: Availability[];
+  itinerary: ItineraryDay[];
+  hotels: { name: string; address: string; stars: number }[];
+  activities: { name: string; description: string }[];
+  reviews: Review[];
+};
+export type Availability = {
+  id: string;
+  tourId: string;
+  date: string;
+  capacity: number;
+  reserved: number;
+  tour?: { title: string };
+};
+export type ItineraryDay = {
+  day: number;
+  title: string;
+  description: string;
+  meals: string;
+};
+export type Booking = {
+  id: string;
+  reference: string;
+  userId: string;
+  tour: Tour;
+  travelDate: string;
+  count: number;
+  subtotal: number;
+  discount: number;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  refund: number;
+  expiresAt?: string;
+  travelers: { name: string; age: number; email?: string }[];
+  payments: { id: string; status: string; amount: number; createdAt: string }[];
+  review?: Review;
+  user?: User;
+  cancellation?: {
+    eligible: boolean;
+    deadline: string;
+    estimatedRefund: number;
+  };
+};
+export type Notice = {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  link?: string;
+  createdAt: string;
+  user?: { email: string };
+};
+export type Document = {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  ownerId: string | null;
+  status: string;
+  indexedAt: string | null;
+  _count: { chunks: number };
+};
+export type ChatMessage = {
+  id: string;
+  role: string;
+  content: string;
+  sources: { id: string; title: string; link?: string }[];
+};
